@@ -90,7 +90,7 @@ void Lis3dh_IntEventClear( void )
   u8_t src;
 
   LIS3DH_GetInt1Src(&src);
-  printf("Move Detected INT1 src:0x%02x\r\n", src); 
+  printf("Move detected INT1 src:0x%02x\r\n", src); 
 }
 
 uint8_t Lis3dhGetIntState( void )

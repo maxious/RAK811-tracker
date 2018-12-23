@@ -1,0 +1,12 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "st32flash",
+            "type": "shell",
+            "command": "stm32flash_src/stm32flash.exe -E -w .pioenvs/rak811/firmware.bin"
+        }
+    ]
+}
