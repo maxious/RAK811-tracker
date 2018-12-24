@@ -116,7 +116,7 @@ void BoardInitPeriph( void )
     GpsInit( );
 	
 	  //Init LIS3DH
-	  LIS3DH_Init( );
+	  //LIS3DH_Init( );
 
     // Switch LED 1, 2 OFF
     GpioWrite( &Led1, 1 );

@@ -6,7 +6,10 @@
         {
             "label": "st32flash",
             "type": "shell",
-            "command": "stm32flash_src/stm32flash.exe -E -w .pioenvs/rak811/firmware.bin"
+            "command": "stm32flash_src/stm32flash.exe -E -w .pioenvs/rak811/firmware.bin COM4",
+            "problemMatcher": [
+                "$gcc"
+            ]
         }
     ]
 }

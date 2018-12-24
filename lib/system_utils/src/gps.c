@@ -28,6 +28,10 @@ const char NmeaDataTypeGPGSA[] = "GPGSA";
 const char NmeaDataTypeGPGSV[] = "GPGSV";
 const char NmeaDataTypeGPRMC[] = "GPRMC";
 
+const char NmeaDataTypeGPVTG[] = "GPVTG";
+const char NmeaDataTypeGPGLL[] = "GPGLL";
+const char NmeaDataTypeGPTXT[] = "GPTXT";
+
 /* Value used for the conversion of the position from DMS to decimal */
 const int32_t MaxNorthPosition = 8388607;       // 2^23 - 1
 const int32_t MaxSouthPosition = 8388608;       // -2^23
@@ -270,8 +274,10 @@ int32_t GpsNmeaChecksum( int8_t *nmeaStr, int32_t nmeaStrSize, int8_t * checksum
     }
 
     // XOR until '*' or max length is reached
+    // printf("$");
     while( nmeaStr[i] != '*' )
     {
+        // printf("%c",nmeaStr[i]);
         checkNum ^= nmeaStr[i];
         i += 1;
         if( i >= nmeaStrSize )
@@ -279,7 +285,9 @@ int32_t GpsNmeaChecksum( int8_t *nmeaStr, int32_t nmeaStrSize, int8_t * checksum
             return -1;
         }
     }
-
+    // if (nmeaStr[i] = '*') {
+    //     printf("\r\n");
+    // }
     // Convert checksum value to 2 hexadecimal characters
     checksum[0] = Nibble2HexChar( checkNum / 16 ); // upper nibble
     checksum[1] = Nibble2HexChar( checkNum % 16 ); // lower nibble
@@ -512,6 +520,7 @@ uint8_t GpsParseGpsData( int8_t *rxBuffer, int32_t rxBufferSize )
         }
 
         GpsFormatGpsData( );
+        printf("%s",rxBuffer);
         return SUCCESS;
     }
     else if ( strncmp( ( const char* )NmeaGpsData.NmeaDataType, ( const char* )NmeaDataTypeGPRMC, 5 ) == 0 )
@@ -635,6 +644,12 @@ uint8_t GpsParseGpsData( int8_t *rxBuffer, int32_t rxBufferSize )
         }
 
         GpsFormatGpsData( );
+        printf("%s",rxBuffer);
+        return SUCCESS;
+    }
+    else if ( NmeaGpsData.NmeaDataType[0] == 'G' || NmeaGpsData.NmeaDataType[0] == 'P' )
+    {
+        printf("%s",rxBuffer);
         return SUCCESS;
     }
     else

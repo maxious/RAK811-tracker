@@ -26,7 +26,7 @@
 /*!
  * Defines the application data transmission duty cycle. 5s, value in [ms].
  */
-#define APP_TX_DUTYCYCLE                            20000
+#define APP_TX_DUTYCYCLE                            10000
 
 /*!
  * Defines a random delay for application data transmission duty cycle. 1s,
@@ -90,7 +90,7 @@
 #elif defined( REGION_AS923 ) || defined( REGION_AU915 ) || defined( REGION_US915 ) || defined( REGION_US915_HYBRID )
 
 #define LORAWAN_APP_DATA_SIZE                       11
-#define LORAWAN_DEFAULT_DATARATE                    DR_4
+#define LORAWAN_DEFAULT_DATARATE                    DR_3
 
 #else
 
@@ -180,22 +180,6 @@ static enum eDeviceState {
 	DEVICE_STATE_SLEEP
 } DeviceState;
 
-/*!
- * LoRaWAN compliance tests support data
- */
-struct ComplianceTest_s {
-	bool Running;
-	uint8_t State;
-	bool IsTxConfirmed;
-	uint8_t AppPort;
-	uint8_t AppDataSize;
-	uint8_t *AppDataBuffer;
-	uint16_t DownLinkCounter;
-	bool LinkCheck;
-	uint8_t DemodMargin;
-	uint8_t NbGateways;
-} ComplianceTest;
-
 void dump_hex2str(uint8_t *buf, uint8_t len) {
 	for (uint8_t i = 0; i < len; i++) {
 		printf("%02X ", buf[i]);
@@ -215,7 +199,7 @@ static void PrepareTxFrame(uint8_t port) {
 		ret = GpsGetLatestGpsPositionDouble(&latitude, &longitude);
 		altitudeGps = GpsGetLatestGpsAltitude(); // in m
 		hdopGps = GpsGetLatestGpsHorizontalDilution();
-		//printf("[Debug]: latitude: %f, longitude: %f , altitudeGps: %d \n", latitude, longitude, altitudeGps);
+		//printf("[Debug]: latitude: %f, longitude: %f , altitudeGps: %d \r\n", latitude, longitude, altitudeGps);
 		//printf("GpsGetLatestGpsPositionDouble ret = %d\r\n", ret);
 		uint32_t lat = ((latitude + 90) / 180.0) * 16777215;
 		uint32_t lon = ((longitude + 180) / 360.0) * 16777215;
@@ -240,10 +224,13 @@ static void PrepareTxFrame(uint8_t port) {
 			AppData[8] = hdev;
 
 			AppDataSize = 9;
-
+			// Switch LED 2 Blue ON
+			GpioWrite(&Led2, 0);
 		} else {
 			printf("No GPS fix.\r\n");
  			AppDataSize = 0;
+			// Switch LED 2 Blue OFF
+			GpioWrite(&Led2, 1);
 		}
 	}
 		break;
@@ -261,46 +248,24 @@ static void PrepareTxFrame(uint8_t port) {
 		//cayenne LPP Acceleration
 	case 4: {
 
-		LIS3DH_ReadReg(LIS3DH_OUT_X_H, AppData + 0);
-		DelayMs(2);
-		LIS3DH_ReadReg(LIS3DH_OUT_X_L, AppData + 1);
-		DelayMs(2);
-		LIS3DH_ReadReg(LIS3DH_OUT_Y_H, AppData + 2);
-		DelayMs(2);
-		LIS3DH_ReadReg(LIS3DH_OUT_Y_L, AppData + 3);
-		DelayMs(2);
-		LIS3DH_ReadReg(LIS3DH_OUT_Z_H, AppData + 4);
-		DelayMs(2);
-		LIS3DH_ReadReg(LIS3DH_OUT_Z_L, AppData + 5);
-		DelayMs(2);
+		// LIS3DH_ReadReg(LIS3DH_OUT_X_H, AppData + 0);
+		// DelayMs(2);
+		// LIS3DH_ReadReg(LIS3DH_OUT_X_L, AppData + 1);
+		// DelayMs(2);
+		// LIS3DH_ReadReg(LIS3DH_OUT_Y_H, AppData + 2);
+		// DelayMs(2);
+		// LIS3DH_ReadReg(LIS3DH_OUT_Y_L, AppData + 3);
+		// DelayMs(2);
+		// LIS3DH_ReadReg(LIS3DH_OUT_Z_H, AppData + 4);
+		// DelayMs(2);
+		// LIS3DH_ReadReg(LIS3DH_OUT_Z_L, AppData + 5);
+		// DelayMs(2);
 
-		AppDataSize = 6;
-		printf("[Debug]: ACC X:%04X Y:%04X Z:%04X\r\n",
-				AppData[0] << 8 | AppData[1], AppData[2] << 8 | AppData[3],
-				AppData[4] << 8 | AppData[5]);
+		// AppDataSize = 6;
+		// printf("[Debug]: ACC X:%04X Y:%04X Z:%04X\r\n",
+		// 		AppData[0] << 8 | AppData[1], AppData[2] << 8 | AppData[3],
+		// 		AppData[4] << 8 | AppData[5]);
 	}
-		break;
-
-	case 224:
-		if (ComplianceTest.LinkCheck == true) {
-			ComplianceTest.LinkCheck = false;
-			AppDataSize = 3;
-			AppData[0] = 5;
-			AppData[1] = ComplianceTest.DemodMargin;
-			AppData[2] = ComplianceTest.NbGateways;
-			ComplianceTest.State = 1;
-		} else {
-			switch (ComplianceTest.State) {
-			case 4:
-				ComplianceTest.State = 1;
-				break;
-			case 1:
-				AppDataSize = 2;
-				AppData[0] = ComplianceTest.DownLinkCounter >> 8;
-				AppData[1] = ComplianceTest.DownLinkCounter;
-				break;
-			}
-		}
 		break;
 	default:
 		break;
@@ -378,11 +343,11 @@ static void OnLed1TimerEvent(void) {
 /*!
  * \brief Function executed on Led 2 Timeout event
  */
-static void OnLed2TimerEvent(void) {
-	TimerStop(&Led2Timer);
-	// Switch LED 2 OFF
-	GpioWrite(&Led2, 1);
-}
+// static void OnLed2TimerEvent(void) {
+// 	TimerStop(&Led2Timer);
+// 	// Switch LED 2 OFF
+// 	GpioWrite(&Led2, 1);
+// }
 
 /*!
  * \brief   MCPS-Confirm event function
@@ -454,10 +419,6 @@ static void McpsIndication(McpsIndication_t *mcpsIndication) {
 	// Check Snr
 	// Check RxSlot
 
-	if (ComplianceTest.Running == true) {
-		ComplianceTest.DownLinkCounter++;
-	}
-
 	if (mcpsIndication->RxData == true) {
 		switch (mcpsIndication->Port) {
 		case 1: // The application LED can be controlled on port 1 or 2
@@ -465,142 +426,6 @@ static void McpsIndication(McpsIndication_t *mcpsIndication) {
 			if (mcpsIndication->BufferSize == 1) {
 				AppLedStateOn = mcpsIndication->Buffer[0] & 0x01;
 				GpioWrite(&Led2, ((AppLedStateOn & 0x01) != 0) ? 0 : 1);
-			}
-			break;
-		case 224:
-			if (ComplianceTest.Running == false) {
-				// Check compliance test enable command (i)
-				if ((mcpsIndication->BufferSize == 4)
-						&& (mcpsIndication->Buffer[0] == 0x01)
-						&& (mcpsIndication->Buffer[1] == 0x01)
-						&& (mcpsIndication->Buffer[2] == 0x01)
-						&& (mcpsIndication->Buffer[3] == 0x01)) {
-					IsTxConfirmed = false;
-					AppPort = 224;
-					AppDataSize = 2;
-					ComplianceTest.DownLinkCounter = 0;
-					ComplianceTest.LinkCheck = false;
-					ComplianceTest.DemodMargin = 0;
-					ComplianceTest.NbGateways = 0;
-					ComplianceTest.Running = true;
-					ComplianceTest.State = 1;
-
-					MibRequestConfirm_t mibReq;
-					mibReq.Type = MIB_ADR;
-					mibReq.Param.AdrEnable = true;
-					LoRaMacMibSetRequestConfirm(&mibReq);
-
-#if defined( REGION_EU868 )
-					LoRaMacTestSetDutyCycleOn( false );
-#endif
-					GpsStop();
-				}
-			} else {
-				ComplianceTest.State = mcpsIndication->Buffer[0];
-				switch (ComplianceTest.State) {
-				case 0: // Check compliance test disable command (ii)
-					IsTxConfirmed = LORAWAN_CONFIRMED_MSG_ON;
-					AppPort = LORAWAN_APP_PORT;
-					AppDataSize = LORAWAN_APP_DATA_SIZE;
-					ComplianceTest.DownLinkCounter = 0;
-					ComplianceTest.Running = false;
-
-					MibRequestConfirm_t mibReq;
-					mibReq.Type = MIB_ADR;
-					mibReq.Param.AdrEnable = LORAWAN_ADR_ON;
-					LoRaMacMibSetRequestConfirm(&mibReq);
-#if defined( REGION_EU868 )
-					LoRaMacTestSetDutyCycleOn( LORAWAN_DUTYCYCLE_ON );
-#endif
-					GpsStart();
-					break;
-				case 1: // (iii, iv)
-					AppDataSize = 2;
-					break;
-				case 2: // Enable confirmed messages (v)
-					IsTxConfirmed = true;
-					ComplianceTest.State = 1;
-					break;
-				case 3: // Disable confirmed messages (vi)
-					IsTxConfirmed = false;
-					ComplianceTest.State = 1;
-					break;
-				case 4: // (vii)
-					AppDataSize = mcpsIndication->BufferSize;
-
-					AppData[0] = 4;
-					for (uint8_t i = 1;
-							i < MIN(AppDataSize, LORAWAN_APP_DATA_MAX_SIZE);
-							i++) {
-						AppData[i] = mcpsIndication->Buffer[i] + 1;
-					}
-					break;
-				case 5: // (viii)
-				{
-					MlmeReq_t mlmeReq;
-					mlmeReq.Type = MLME_LINK_CHECK;
-					LoRaMacMlmeRequest(&mlmeReq);
-				}
-					break;
-				case 6: // (ix)
-				{
-					MlmeReq_t mlmeReq;
-
-					// Disable TestMode and revert back to normal operation
-					IsTxConfirmed = LORAWAN_CONFIRMED_MSG_ON;
-					AppPort = LORAWAN_APP_PORT;
-					AppDataSize = LORAWAN_APP_DATA_SIZE;
-					ComplianceTest.DownLinkCounter = 0;
-					ComplianceTest.Running = false;
-
-					MibRequestConfirm_t mibReq;
-					mibReq.Type = MIB_ADR;
-					mibReq.Param.AdrEnable = LORAWAN_ADR_ON;
-					LoRaMacMibSetRequestConfirm(&mibReq);
-#if defined( REGION_EU868 )
-					LoRaMacTestSetDutyCycleOn( LORAWAN_DUTYCYCLE_ON );
-#endif
-					GpsStart();
-
-					mlmeReq.Type = MLME_JOIN;
-
-					mlmeReq.Req.Join.DevEui = DevEui;
-					mlmeReq.Req.Join.AppEui = AppEui;
-					mlmeReq.Req.Join.AppKey = AppKey;
-					mlmeReq.Req.Join.NbTrials = 3;
-
-					LoRaMacMlmeRequest(&mlmeReq);
-					DeviceState = DEVICE_STATE_SLEEP;
-				}
-					break;
-				case 7: // (x)
-				{
-					if (mcpsIndication->BufferSize == 3) {
-						MlmeReq_t mlmeReq;
-						mlmeReq.Type = MLME_TXCW;
-						mlmeReq.Req.TxCw.Timeout = (uint16_t)(
-								(mcpsIndication->Buffer[1] << 8)
-										| mcpsIndication->Buffer[2]);
-						LoRaMacMlmeRequest(&mlmeReq);
-					} else if (mcpsIndication->BufferSize == 7) {
-						MlmeReq_t mlmeReq;
-						mlmeReq.Type = MLME_TXCW_1;
-						mlmeReq.Req.TxCw.Timeout = (uint16_t)(
-								(mcpsIndication->Buffer[1] << 8)
-										| mcpsIndication->Buffer[2]);
-						mlmeReq.Req.TxCw.Frequency =
-								(uint32_t) ((mcpsIndication->Buffer[3] << 16)
-										| (mcpsIndication->Buffer[4] << 8)
-										| mcpsIndication->Buffer[5]) * 100;
-						mlmeReq.Req.TxCw.Power = mcpsIndication->Buffer[6];
-						LoRaMacMlmeRequest(&mlmeReq);
-					}
-					ComplianceTest.State = 1;
-				}
-					break;
-				default:
-					break;
-				}
 			}
 			break;
 		default:
@@ -626,7 +451,7 @@ static void MlmeConfirm(MlmeConfirm_t *mlmeConfirm) {
 			// Status is OK, node has joined the network
 			DeviceState = DEVICE_STATE_SEND;
 			printf("OTAA Join Success \r\n");
-			// Switch LED 1 ON
+			// Switch LED 1 Green ON
 			GpioWrite(&Led1, 0);
 			TimerStart(&Led1Timer);
 		} else {
@@ -639,11 +464,6 @@ static void MlmeConfirm(MlmeConfirm_t *mlmeConfirm) {
 		if (mlmeConfirm->Status == LORAMAC_EVENT_INFO_STATUS_OK) {
 			// Check DemodMargin
 			// Check NbGateways
-			if (ComplianceTest.Running == true) {
-				ComplianceTest.LinkCheck = true;
-				ComplianceTest.DemodMargin = mlmeConfirm->DemodMargin;
-				ComplianceTest.NbGateways = mlmeConfirm->NbGateways;
-			}
 		}
 		break;
 	}
@@ -703,9 +523,9 @@ int main(void) {
 			TimerInit(&Led1Timer, OnLed1TimerEvent);
 			TimerSetValue(&Led1Timer, 2000);
 
-			TimerInit(&Led2Timer, OnLed2TimerEvent);
-			TimerSetValue(&Led2Timer, 50);
-			TimerStart(&Led2Timer);
+			// TimerInit(&Led2Timer, OnLed2TimerEvent);
+			// TimerSetValue(&Led2Timer, 50);
+			// TimerStart(&Led2Timer);
 			mibReq.Type = MIB_ADR;
 			mibReq.Param.AdrEnable = LORAWAN_ADR_ON;
 			LoRaMacMibSetRequestConfirm(&mibReq);
@@ -802,7 +622,7 @@ int main(void) {
 			mibReq.Param.IsNetworkJoined = true;
 			LoRaMacMibSetRequestConfirm( &mibReq );
 
-			// Switch LED 1 ON
+			// Switch LED 1 Green ON
 			GpioWrite( &Led1, 0 );
 			TimerStart( &Led1Timer );
 			DeviceState = DEVICE_STATE_SEND;
@@ -813,24 +633,26 @@ int main(void) {
 			if (NextTx == true) {
 				int err;
 				PrepareTxFrame(AppPort);
-
+				// if no GPS data, send battery level instead
+				if (AppDataSize == 0) {
+					AppPort = 3;
+					PrepareTxFrame(AppPort);
+				}
+				
 				err = SendFrame();
 				NextTx = err == LORAMAC_STATUS_OK;
 				printf("SendFrame: %d\r\n", err);
 				
-				AppPort++;
-				if (AppPort >= 5) {
+				/*AppPort++;*/
+				if (AppPort >= 3) {
 					AppPort = 2;
 				}
 			}
-			if (ComplianceTest.Running == true) {
-				// Schedule next packet transmission
-				TxDutyCycleTime = 5000; // 5000 ms
-			} else {
-				// Schedule next packet transmission
-				TxDutyCycleTime = APP_TX_DUTYCYCLE
-						+ randr(-APP_TX_DUTYCYCLE_RND, APP_TX_DUTYCYCLE_RND);
-			}
+
+			// Schedule next packet transmission
+			TxDutyCycleTime = APP_TX_DUTYCYCLE
+					+ randr(-APP_TX_DUTYCYCLE_RND, APP_TX_DUTYCYCLE_RND);
+
 			DeviceState = DEVICE_STATE_CYCLE;
 			break;
 		}
@@ -852,64 +674,19 @@ int main(void) {
 			break;
 		}
 		}
-		if (GpsGetPpsDetectedState() == true) {
-			// Switch LED 2 ON
-			GpioWrite(&Led2, 0);
-			TimerStart(&Led2Timer);
-		}
-		if (Lis3dhGetIntState() == true) {
-			Lis3dh_IntEventClear();
-			for (uint8_t index = 0; index < 6; index++) {
-				LIS3DH_ReadReg(LIS3DH_OUT_X_L + index, AppData + 2 + index);
-				DelayMs(1);
-			}
-			//printf("[Debug]: ACC X:%04X Y:%04X Z:%04X\r\n", AppData[3]<<8 | AppData[2], AppData[5]<<8 | AppData[4], AppData[7]<<8 | AppData[6]);
-		}
+		// if (GpsGetPpsDetectedState() == true) {
+		// 	// Switch LED 2 Blue ON
+		// 	GpioWrite(&Led2, 0);
+		// 	TimerStart(&Led2Timer);
+		// }
+		// if (Lis3dhGetIntState() == true) {
+		// 	Lis3dh_IntEventClear();
+		// 	for (uint8_t index = 0; index < 6; index++) {
+		// 		LIS3DH_ReadReg(LIS3DH_OUT_X_L + index, AppData + 2 + index);
+		// 		DelayMs(1);
+		// 	}
+		// 	//printf("[Debug]: ACC X:%04X Y:%04X Z:%04X\r\n", AppData[3]<<8 | AppData[2], AppData[5]<<8 | AppData[4], AppData[7]<<8 | AppData[6]);
+		// }
 	}
 }
 
-#if 0
-#include "stm32l1xx_hal.h"
-
-#define LED1_PIN                                GPIO_PIN_12
-#define LED1_GPIO_PORT                          GPIOA
-#define LED1_GPIO_CLK_ENABLE()                  __HAL_RCC_GPIOA_CLK_ENABLE()
-
-#define LED2_PIN                                GPIO_PIN_4
-#define LED2_GPIO_PORT                          GPIOB
-#define LED2_GPIO_CLK_ENABLE()                  __HAL_RCC_GPIOB_CLK_ENABLE()
-void LED_Init(); 
-
-int main(void) {
-  HAL_Init();
-  LED_Init();
-  
-  while (1)
-  {
-    HAL_GPIO_TogglePin(LED1_GPIO_PORT, LED1_PIN);
-    HAL_Delay(1000);
-    HAL_GPIO_TogglePin(LED2_GPIO_PORT, LED2_PIN);
-  }
-}
-
-void LED_Init() {
-  LED1_GPIO_CLK_ENABLE();
-  GPIO_InitTypeDef GPIO_InitStruct;
-  GPIO_InitStruct.Pin = LED1_PIN;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
-  GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
-  HAL_GPIO_Init(LED1_GPIO_PORT, &GPIO_InitStruct);
-
-  LED2_GPIO_CLK_ENABLE();
-  GPIO_InitStruct.Pin = LED2_PIN;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
-  GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
-  HAL_GPIO_Init(LED2_GPIO_PORT, &GPIO_InitStruct);
-}
-
-void SysTick_Handler(void) {
-  HAL_IncTick();
-}
-#endif
