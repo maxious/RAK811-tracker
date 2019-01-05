@@ -13,5 +13,9 @@
         "board.h": "c",
         "gps.h": "c",
         "gps-board.h": "c"
+    },
+    "terminal.integrated.env.osx": {
+        "PATH": "/Users/alex/.platformio/penv/bin:/Users/alex/.platformio/penv:/Library/Frameworks/Python.framework/Versions/3.6/bin:/Library/Frameworks/Python.framework/Versions/3.7/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin",
+        "PLATFORMIO_CALLER": "vscode"
     }
 }

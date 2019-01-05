@@ -48,7 +48,7 @@ void GpsMcuOnPpsSignal( void )
     if( parseData == true )
     {
         UartMcuInit( &GpsUart, GPS_UART, GPS_UART_TX, GPS_UART_RX );
-        UartMcuConfig( &GpsUart, RX_ONLY, 9600, UART_8_BIT, UART_1_STOP_BIT, NO_PARITY, NO_FLOW_CTRL );
+        UartMcuConfig( &GpsUart, RX_TX, 9600, UART_8_BIT, UART_1_STOP_BIT, NO_PARITY, NO_FLOW_CTRL );
     }
 #endif
 }
@@ -86,7 +86,7 @@ void GpsMcuInit( void )
 
 #ifndef GPS_PPS     
     UartMcuInit( &GpsUart, GPS_UART, GPS_UART_TX, GPS_UART_RX );
-    UartMcuConfig( &GpsUart, RX_ONLY, 9600, UART_8_BIT, UART_1_STOP_BIT, NO_PARITY, NO_FLOW_CTRL ); 
+    UartMcuConfig( &GpsUart, RX_TX, 9600, UART_8_BIT, UART_1_STOP_BIT, NO_PARITY, NO_FLOW_CTRL ); 
 #endif   
 }
 
@@ -122,7 +122,7 @@ void GpsMcuIrqNotify( UartNotifyId_t id )
             if( data == '\n' )
             {
                 NmeaString[NmeaStringSize++] = '\0';
-							  //printf("%d\n",NmeaStringSize);
+							  printf("%d\n",NmeaStringSize);
                 GpsParseGpsData( ( int8_t* )NmeaString, NmeaStringSize );
 #ifdef GPS_PPS   
                 UartMcuDeInit( &GpsUart );
@@ -130,5 +130,7 @@ void GpsMcuIrqNotify( UartNotifyId_t id )
                 BlockLowPowerDuringTask ( false );
             }
         }
+    } else {
+          printf("got a UART_NOTIFY_TX on GPS uart\n");
     }
 }

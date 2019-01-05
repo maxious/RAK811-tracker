@@ -195,7 +195,10 @@ void UartMcuDeInit( Uart_t *obj )
   GpioInit( &obj->Tx, obj->Tx.pin, PIN_ANALOGIC, PIN_PUSH_PULL, PIN_NO_PULL, 0 );
   GpioInit( &obj->Rx, obj->Rx.pin, PIN_ANALOGIC, PIN_PUSH_PULL, PIN_NO_PULL, 0 );
 }
-
+uint8_t UartMcuPutBuffer( Uart_t *obj, uint8_t *buffer, uint16_t size )
+{
+    return HAL_UART_Transmit_IT(&UartContext[obj->UartId].UartHandle, buffer,size);
+}
 uint8_t UartMcuPutChar( Uart_t *obj, uint8_t data )
 {
     if( IsFifoFull( &obj->FifoTx ) == false )
@@ -204,7 +207,7 @@ uint8_t UartMcuPutChar( Uart_t *obj, uint8_t data )
         FifoPush( &obj->FifoTx, data );
 				BoardEnableIrq( );
         // Trig UART Tx interrupt to start sending the FIFO contents.
-        __HAL_UART_ENABLE_IT( &UartContext[UART_1].UartHandle, USART_IT_TXE );
+        __HAL_UART_ENABLE_IT( &UartContext[obj->UartId].UartHandle, USART_IT_TXE );
         return 0; // OK
     }
     
@@ -228,21 +231,38 @@ uint8_t UartMcuGetChar( Uart_t *obj, uint8_t *data )
 void HAL_UART_TxCpltCallback( UART_HandleTypeDef *handle )
 {
     uint8_t data;
+    Uart_t *uart = &Uart1;
+    UartId_t uartId = UART_1;
+    IRQn_Type irqn;
 
-    if( IsFifoEmpty( &Uart1.FifoTx ) == false )
+
+    if( handle == &UartContext[UART_1].UartHandle )
     {
-        data = FifoPop( &Uart1.FifoTx );
+      uart = &Uart1;
+      uartId = UART_1;
+      irqn = USART1_IRQn;
+    }
+    else if( handle == &UartContext[UART_3].UartHandle )
+    {
+      uart = &GpsUart;
+      uartId = UART_3;
+      irqn = USART3_IRQn;
+    }
+
+    if( IsFifoEmpty( &uart->FifoTx ) == false )
+    {
+        data = FifoPop( &uart->FifoTx );
         //  Write one byte to the transmit data register
         HAL_UART_Transmit_IT( handle, &data, 1 );
     }
     else
     {
         // Disable the USART Transmit interrupt
-        HAL_NVIC_DisableIRQ( USART1_IRQn );
+        HAL_NVIC_DisableIRQ( irqn );
     }
-    if( Uart1.IrqNotify != NULL )
+    if( uart->IrqNotify != NULL )
     {
-        Uart1.IrqNotify( UART_NOTIFY_TX );
+        uart->IrqNotify( UART_NOTIFY_TX );
     }
 }
 
@@ -307,6 +327,7 @@ void USART3_IRQHandler( void )
   {
     if( ( UartContext[UART_3].UartHandle.State == HAL_UART_STATE_BUSY_RX ) || UartContext[UART_3].UartHandle.State == HAL_UART_STATE_BUSY_TX_RX )
     {
+    printf("Workaround to solve an issue with the HAL drivers not managin the uart state correctly.");
       UartContext[UART_3].UartHandle.State = HAL_UART_STATE_BUSY_TX_RX;
     }
   }

@@ -6,7 +6,7 @@
         {
             "label": "st32flash",
             "type": "shell",
-            "command": "stm32flash_src/stm32flash.exe -E -w .pioenvs/rak811/firmware.bin COM4",
+            "command": "stm32flash_src/stm32flash -E -w .pioenvs/rak811/firmware.bin /dev/cu.SLAB_USBtoUART",
             "problemMatcher": [
                 "$gcc"
             ]

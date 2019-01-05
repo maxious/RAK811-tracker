@@ -457,7 +457,13 @@ uint8_t GpsParseGpsData( int8_t *rxBuffer, int32_t rxBufferSize )
         fieldSize = 0;
         while( rxBuffer[i + fieldSize++] != ',' )
         {
-            if( fieldSize > 6 )
+            if( rxBuffer[0] == 'G' && fieldSize > 6 )
+            {
+                return FAIL;
+            } else if( rxBuffer[0] == 'P' && fieldSize > 7 )
+            {
+                return FAIL;
+            } else 
             {
                 return FAIL;
             }

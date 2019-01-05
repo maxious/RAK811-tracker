@@ -627,6 +627,38 @@ int main(void) {
 			TimerStart( &Led1Timer );
 			DeviceState = DEVICE_STATE_SEND;
 #endif
+
+// GPS setup
+// https://nmeachecksum.eqth.net/
+const char PMTK_API_SET_SUPPORT_QZSS_NMEA[] = "$PMTK351,1*28\r\n";
+printf("PMTK_API_SET_SUPPORT_QZSS_NMEA: %x \r\n", UartMcuPutBuffer(GPS_UART, PMTK_API_SET_SUPPORT_QZSS_NMEA, strlen(PMTK_API_SET_SUPPORT_QZSS_NMEA)));
+const char PMTK_API_SET_NMEA_OUTPUT[] = "$PMTK314,1,1,0,1,1,2,3,2,0,0,0,0,0,0,0,0,0,1,2*28\r\n";
+/*
+ 0 GLL GLL interval - Geographic position - latitude longitude
+1 RMC RMC interval - Recommended minimum specific GNSS sentence
+2 VTG VTG interval - Course over ground and ground speed
+3 GGA GGA interval - GPS fix data
+4 GSA GSA interval - GNSS DOPS and active satellites
+5 GSV GSV interval - GNSS satellites in view
+6 GRS GRS interval – GNSS range residuals
+7 GST GST interval – GNSS pseudorange error statistics
+17 ZDA ZDA interval - Time and date
+18 MCHN PMTKCHN interval - GNSS channel status
+*/
+printf("PMTK_API_SET_NMEA_OUTPUT: %x \r\n", UartMcuPutBuffer(GPS_UART, PMTK_API_SET_NMEA_OUTPUT, strlen(PMTK_API_SET_NMEA_OUTPUT)));
+const char PMTK_API_SET_GNSS_SEARCH_MODE[] = "$PMTK353,1,1,1,1,0*2B\r\n";
+/*
+GPS,GLONASS,GALILEO,GALILEO_FULL
+*/
+printf("PMTK_API_SET_GNSS_SEARCH_MODE: %x \r\n", UartMcuPutBuffer(GPS_UART, PMTK_API_SET_GNSS_SEARCH_MODE, strlen(PMTK_API_SET_GNSS_SEARCH_MODE)));
+
+// enable SBAS from QZSS?
+const char PMTK_API_SET_DGPS_MODE = "$PMTK301,2*2E\r\n";
+printf("PMTK_API_SET_DGPS_MODE: %x \r\n", UartMcuPutBuffer(GPS_UART, PMTK_API_SET_DGPS_MODE, strlen(PMTK_API_SET_DGPS_MODE)));
+
+const char PMTK_API_SET_SBAS_ENABLED = "$PMTK313,1*2E\r\n";
+printf("PMTK_API_SET_SBAS_ENABLED: %x \r\n", UartMcuPutBuffer(GPS_UART, PMTK_API_SET_SBAS_ENABLED, strlen(PMTK_API_SET_SBAS_ENABLED)));
+
 			break;
 		}
 		case DEVICE_STATE_SEND: {
@@ -639,9 +671,9 @@ int main(void) {
 					PrepareTxFrame(AppPort);
 				}
 				
-				err = SendFrame();
-				NextTx = err == LORAMAC_STATUS_OK;
-				printf("SendFrame: %d\r\n", err);
+				// err = SendFrame();
+				// NextTx = err == LORAMAC_STATUS_OK;
+				// printf("SendFrame: %d\r\n", err);
 				
 				/*AppPort++;*/
 				if (AppPort >= 3) {

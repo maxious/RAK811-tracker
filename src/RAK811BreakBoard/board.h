@@ -115,6 +115,7 @@ Maintainer: Miguel Luis and Gregory Cristian
 
 #define GPS_UART        		            						UART_3 
 #define GPS_POWER_ON_PIN		            						PA_15
+#define GPS_STANDBY_PIN                             PB_2
 #define GPS_UART_TX                                 PB_10
 #define GPS_UART_RX                                 PB_11
 #define GPS_PPS_PIN                                 PA_0
